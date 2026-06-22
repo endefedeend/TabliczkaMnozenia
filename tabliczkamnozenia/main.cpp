@@ -1,11 +1,10 @@
 #include "raylib.h"
-#include <string>
 
-const int W = 1000, H = 1000;
-const int N = 10, C = 70;
-const int FONT = 28;
+constexpr int W = 1000, H = 1000;
+constexpr int N = 10, C = 70, FONT = 28;
+constexpr int SX = (W - C * N) / 3;
+constexpr int SY = 195;
 
-int startX, startY;
 int hoverX = -1, hoverY = -1;
 
 Color header[] = {
@@ -13,11 +12,11 @@ Color header[] = {
     SKYBLUE, BLUE, PURPLE, PINK, VIOLET
 };
 
-std::string CellText(int x, int y) {
+const char* CellText(int x, int y) {
     if (x == 0 && y == 0) return "x";
-    if (y == 0) return std::to_string(x);
-    if (x == 0) return std::to_string(y);
-    return std::to_string(x * y);
+    if (x == 0) return TextFormat("%d", y);
+    if (y == 0) return TextFormat("%d", x);
+    return TextFormat("%d", x * y);
 }
 
 Color CellColor(int x, int y) {
@@ -28,34 +27,29 @@ Color CellColor(int x, int y) {
     return {255, 245, 210, 255};
 }
 
-void DrawCenteredText(const std::string& text, Rectangle r, int size, Color color) {
-    int width = MeasureText(text.c_str(), size);
+void DrawTextCentered(const char* text, Rectangle r, int size, Color color) {
+    int width = MeasureText(text, size);
 
     DrawText(
-        text.c_str(),
-        r.x + (r.width - width) / 2,
-        r.y + (r.height - size) / 2,
+        text,
+        (int)(r.x + (r.width - width) / 2),
+        (int)(r.y + (r.height - size) / 2),
         size,
         color
     );
 }
-
 void UpdateHover() {
-    int x = (GetMouseX() - startX) / C;
-    int y = (GetMouseY() - startY) / C;
+    hoverX = (GetMouseX() - SX) / C;
+    hoverY = (GetMouseY() - SY) / C;
 
-    if (x >= 1 && x <= N && y >= 1 && y <= N) {
-        hoverX = x;
-        hoverY = y;
-    } else {
+    if (hoverX < 1 || hoverX > N || hoverY < 1 || hoverY > N)
         hoverX = hoverY = -1;
-    }
 }
 
 void DrawCell(int x, int y) {
     Rectangle r = {
-        (float)(startX + x * C),
-        (float)(startY + y * C),
+        (float)(SX + x * C),
+        (float)(SY + y * C),
         C - 5.0f,
         C - 5.0f
     };
@@ -63,22 +57,24 @@ void DrawCell(int x, int y) {
     DrawRectangleRounded(r, 0.15f, 8, CellColor(x, y));
     DrawRectangleRoundedLines(r, 0.15f, 8, DARKGRAY);
 
-    Color textColor = (x == 0 || y == 0) ? WHITE : DARKBLUE;
-    DrawCenteredText(CellText(x, y), r, FONT, textColor);
+    DrawTextCentered(
+        CellText(x, y),
+        r,
+        FONT,
+        (x == 0 || y == 0) ? WHITE : DARKBLUE
+    );
 }
 
 void DrawResult() {
-    if (hoverX == -1) {
-        DrawText("Najedz myszka na pole!", 740, 90, 14, DARKGREEN);
-        return;
-    }
-
-    std::string text =
-        std::to_string(hoverY) + " x " +
-        std::to_string(hoverX) + " = " +
-        std::to_string(hoverX * hoverY);
-
-    DrawText(text.c_str(), 740, 90, 42, DARKGREEN);
+    DrawText(
+        hoverX == -1
+            ? "Najedz myszka na pole!"
+            : TextFormat("%d x %d = %d", hoverY, hoverX, hoverX * hoverY),
+        740,
+        90,
+        hoverX == -1 ? 14 : 42,
+        DARKGREEN
+    );
 }
 
 void DrawTable() {
@@ -88,28 +84,21 @@ void DrawTable() {
     DrawText("TABLICZKA", 280, 35, 70, ORANGE);
     DrawText("MNOZENIA", 320, 105, 60, SKYBLUE);
 
-    Rectangle frame = {
-        (float)(startX - 25),
-        (float)(startY - 25),
-        (float)(C * (N + 1) + 45),
-        (float)(C * (N + 1) + 45)
-    };
+    DrawRectangleRounded(
+        {(float)SX - 25, (float)SY - 25, C * (N + 1) + 45.0f, C * (N + 1) + 45.0f},
+        0.02f,
+        8,
+        {160, 120, 80, 255}
+    );
 
-    DrawRectangleRounded(frame, 0.02f, 8, {160, 120, 80, 255});
-
-    for (int y = 0; y <= N; y++) {
-        for (int x = 0; x <= N; x++) {
+    for (int y = 0; y <= N; y++)
+        for (int x = 0; x <= N; x++)
             DrawCell(x, y);
-        }
-    }
 
     DrawResult();
 }
 
 int main() {
-    startX = (W - C * N) / 3;
-    startY = 195;
-
     InitWindow(W, H, "Kolorowa tabliczka mnozenia");
     SetTargetFPS(60);
 
